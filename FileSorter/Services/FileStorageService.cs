@@ -3,7 +3,7 @@ using System.Text;
 
 namespace FileSorter;
 
-internal sealed partial class FileStorageService
+internal sealed class FileStorageService
 {
     internal const int StreamBufferSize = 64 * 1024;
 
