@@ -4,8 +4,7 @@ namespace FileGenerator;
 
 internal sealed record GenerationSettings(
     string OutputPath,
-    string MinimumSizeInMegabytes,
-    string Seed)
+    string MinimumSizeInMegabytes)
 {
     private const long BytesPerMegabyte = 1024L * 1024L;
 
@@ -40,13 +39,6 @@ internal sealed record GenerationSettings(
                 exception);
         }
 
-        if (!int.TryParse(Seed, out var seed))
-        {
-            throw new ArgumentException(
-                "Random seed must be a valid Int32 value.",
-                nameof(Seed));
-        }
-
         var fullOutputPath = Path.GetFullPath(OutputPath);
 
         if (Directory.Exists(fullOutputPath))
@@ -61,12 +53,10 @@ internal sealed record GenerationSettings(
 
         return new ValidatedGenerationSettings(
             OutputPath,
-            minimumFileSizeBytes,
-            seed);
+            minimumFileSizeBytes);
     }
 }
 
 internal sealed record ValidatedGenerationSettings(
     string OutputPath,
-    long MinimumFileSizeBytes,
-    int Seed);
+    long MinimumFileSizeBytes);

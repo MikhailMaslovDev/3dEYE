@@ -99,8 +99,7 @@ public partial class MainWindow : Window
     {
         return new GenerationSettings(
             OutputPathTextBox.Text,
-            SizeInMegabytesTextBox.Text,
-            SeedTextBox.Text);
+            SizeInMegabytesTextBox.Text);
     }
 
     private static string FormatBytes(long bytes)

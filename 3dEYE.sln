@@ -4,6 +4,8 @@ VisualStudioVersion = 18.10.12201.205 stable
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileGenerator", "FileGenerator\FileGenerator.csproj", "{17ED81A5-303E-4747-AB6F-A3F7020CCAA1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileGenerator.Tests", "FileGenerator.Tests\FileGenerator.Tests.csproj", "{36C97E4C-DACB-4F5B-B0D3-533F7B1662C4}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSorter", "FileSorter\FileSorter.csproj", "{63A72E3E-9440-4CB6-8BC0-53E5D2AE8CF3}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileSorter.Tests", "FileSorter.Tests\FileSorter.Tests.csproj", "{9A84F02C-3D76-4DC1-A6CA-D20850A5B48D}"

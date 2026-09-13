@@ -16,18 +16,11 @@ internal sealed class RandomLineFactory
         "common-value"
     ];
 
-    private readonly Random _random;
-
-    public RandomLineFactory(int seed)
-    {
-        _random = new Random(seed);
-    }
-
     public string CreateLine()
     {
-        var number = _random.Next(0, int.MaxValue);
+        var number = Random.Shared.Next(0, int.MaxValue);
         var text = IsDuplicateLine()
-            ? DuplicateTexts[_random.Next(DuplicateTexts.Length)]
+            ? DuplicateTexts[Random.Shared.Next(DuplicateTexts.Length)]
             : CreateRandomText();
 
         return $"{number}.{text}";
@@ -35,17 +28,17 @@ internal sealed class RandomLineFactory
 
     private bool IsDuplicateLine()
     {
-        return _random.Next(DuplicateProbabilityDenominator) == 0;
+        return Random.Shared.Next(DuplicateProbabilityDenominator) == 0;
     }
 
     private string CreateRandomText()
     {
-        var wordCount = _random.Next(1, 7);
+        var wordCount = Random.Shared.Next(1, 7);
         var words = new string[wordCount];
 
         for (var index = 0; index < wordCount; index++)
         {
-            var wordLength = _random.Next(3, 25);
+            var wordLength = Random.Shared.Next(3, 25);
             words[index] = GetRandomString(wordLength);
         }
 
@@ -54,9 +47,6 @@ internal sealed class RandomLineFactory
 
     private string GetRandomString(int length)
     {
-        return string.Create(length, _random, static (characters, random) =>
-        {
-            random.GetItems(AllowedCharacters, characters);
-        });
+        return new string(Random.Shared.GetItems(AllowedCharacters, length));
     }
 }
