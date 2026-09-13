@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="../FileGenerator/FileGenerator.csproj" />
-  <Project Path="../FileSorter/FileSorter.csproj" />
-</Solution>

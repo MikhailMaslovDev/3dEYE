@@ -45,7 +45,7 @@ internal sealed class FileStorageService
         using var reader = new StreamReader(
             inputStream,
             Utf8WithoutBom,
-            detectEncodingFromByteOrderMarks: false,
+            detectEncodingFromByteOrderMarks: true,
             bufferSize: StreamBufferSize,
             leaveOpen: false);
 
