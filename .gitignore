@@ -64,5 +64,5 @@ nunit-*.xml
 
 # Local application output
 *.partial
-invalid-lines.log
+invalid-lines-*.log
 tmp/
