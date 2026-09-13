@@ -1,0 +1,43 @@
+name: Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  file-generator-tests:
+    name: FileGenerator tests
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Run tests
+        run: dotnet test FileGenerator.Tests\FileGenerator.Tests.csproj --configuration Release
+
+  file-sorter-tests:
+    name: FileSorter tests
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.x
+
+      - name: Run tests
+        run: dotnet test FileSorter.Tests\FileSorter.Tests.csproj --configuration Release
