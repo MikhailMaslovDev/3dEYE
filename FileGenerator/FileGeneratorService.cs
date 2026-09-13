@@ -25,7 +25,7 @@ internal sealed class FileGeneratorService
             outputDirectory,
             $".{Path.GetFileName(outputPath)}.{Guid.NewGuid():N}.partial");
 
-        var lineFactory = new RandomLineFactory(validatedSettings.Seed);
+        var lineFactory = new RandomLineFactory();
         var stopwatch = Stopwatch.StartNew();
 
         long writtenBytes = 0;
