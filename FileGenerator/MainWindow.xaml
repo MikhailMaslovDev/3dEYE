@@ -43,21 +43,18 @@
 
         <TextBlock x:Name="StatusTextBlock"
                    Grid.Row="6"
-                   Grid.Column="1"
                    VerticalAlignment="Center"
-                   Text="Ready" Height="16" />
+                   Text="Ready" Height="16" Grid.ColumnSpan="2" Margin="10,0,0,0" />
 
-        <Grid Grid.Row="6" Grid.Column="2">
+        <Grid Grid.Row="6" Grid.Column="2" Margin="0,0,0,-2" Grid.RowSpan="2">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition />
                 <ColumnDefinition />
             </Grid.ColumnDefinitions>
 
             <Button x:Name="GenerateButton"
-                    Width="80"
-                    HorizontalAlignment="Left"
                     Content="Generate"
-                    Click="GenerateButton_Click" />
+                    Click="GenerateButton_Click" Margin="0,0,20,0" />
             <Button x:Name="CancelButton"
                     Grid.Column="1"
                     Width="64"
