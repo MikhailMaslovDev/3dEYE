@@ -3,7 +3,7 @@ using System.Text;
 
 namespace FileSorter;
 
-internal sealed class TemporaryFileSession : IAsyncDisposable
+internal sealed class TemporaryFileSession : IDisposable
 {
     private static readonly UTF8Encoding Utf8WithoutBom = new(false);
 
@@ -22,7 +22,7 @@ internal sealed class TemporaryFileSession : IAsyncDisposable
             FileAccess.Write,
             FileShare.None,
             FileStorageService.StreamBufferSize,
-            FileOptions.Asynchronous);
+            FileOptions.None);
 
         _writer = new StreamWriter(
             outputStream,
@@ -33,10 +33,9 @@ internal sealed class TemporaryFileSession : IAsyncDisposable
         };
     }
 
-    public async Task<TextRecord?> ReadNextAsync(
+    public TextRecord? ReadNext(
         SortedTemporaryFile temporaryFile,
-        long sourceSequence,
-        CancellationToken cancellationToken)
+        long sourceSequence)
     {
         if (!_readers.TryGetValue(temporaryFile.Path, out var reader))
         {
@@ -47,7 +46,7 @@ internal sealed class TemporaryFileSession : IAsyncDisposable
                     FileAccess.Read,
                     FileShare.Read,
                     FileStorageService.StreamBufferSize,
-                    FileOptions.Asynchronous | FileOptions.SequentialScan),
+                    FileOptions.SequentialScan),
                 Utf8WithoutBom,
                 detectEncodingFromByteOrderMarks: false,
                 bufferSize: FileStorageService.StreamBufferSize,
@@ -56,7 +55,9 @@ internal sealed class TemporaryFileSession : IAsyncDisposable
             _readers.Add(temporaryFile.Path, reader);
         }
 
-        var originalLine = await reader.ReadLineAsync(cancellationToken);
+        // Merge reads and writes are sequential and run outside the UI thread.
+        // Synchronous calls prevent one Task allocation per temporary-file row.
+        var originalLine = reader.ReadLine();
 
         if (originalLine is null)
         {
@@ -77,31 +78,29 @@ internal sealed class TemporaryFileSession : IAsyncDisposable
         return record;
     }
 
-    public Task WriteTemporaryRecordAsync(
-        TextRecord record,
-        CancellationToken cancellationToken)
+    public void WriteTemporaryRecord(TextRecord record)
     {
         var writer = _writer
             ?? throw new InvalidOperationException("The temporary file has already been completed.");
 
-        return writer.WriteLineAsync(record.OriginalLine.AsMemory(), cancellationToken);
+        writer.WriteLine(record.OriginalLine);
     }
 
-    public async Task CompleteAsync(CancellationToken cancellationToken)
+    public void Complete()
     {
         var writer = _writer
             ?? throw new InvalidOperationException("The temporary file has already been completed.");
 
-        await writer.FlushAsync(cancellationToken);
-        await writer.DisposeAsync();
+        writer.Flush();
+        writer.Dispose();
         _writer = null;
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
         if (_writer is not null)
         {
-            await _writer.DisposeAsync();
+            _writer.Dispose();
             _writer = null;
         }
 

@@ -29,19 +29,22 @@ internal sealed class FileStorageService
         return directoryPath;
     }
 
-    public async IAsyncEnumerable<Chunk> ReadChunksAsync(
+    public IEnumerable<Chunk> ReadChunks(
         ValidatedSortSettings settings,
         InvalidLinesLogger invalidLinesLogger,
         IProgress<SortingStatus>? progress,
-        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
-        await using var inputStream = new FileStream(
+        // The sorter is already run on a background thread by the UI. Buffered
+        // synchronous I/O avoids allocating a Task for every input record.
+        // Cancellation is checked between records.
+        using var inputStream = new FileStream(
             settings.InputPath,
             FileMode.Open,
             FileAccess.Read,
             FileShare.Read,
             StreamBufferSize,
-            FileOptions.Asynchronous | FileOptions.SequentialScan);
+            FileOptions.SequentialScan);
         using var reader = new StreamReader(
             inputStream,
             Utf8WithoutBom,
@@ -55,7 +58,7 @@ internal sealed class FileStorageService
         long lineNumber = 0;
         long processedBytes = 0;
 
-        while (await reader.ReadLineAsync(cancellationToken) is { } originalLine)
+        while (reader.ReadLine() is { } originalLine)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -64,11 +67,10 @@ internal sealed class FileStorageService
 
             if (!_recordParser.TryParse(originalLine, lineNumber, out var record, out var errorMessage))
             {
-                await invalidLinesLogger.WriteAsync(
+                invalidLinesLogger.Write(
                     lineNumber,
                     errorMessage,
-                    originalLine,
-                    cancellationToken);
+                    originalLine);
                 continue;
             }
 
@@ -102,22 +104,22 @@ internal sealed class FileStorageService
         }
     }
 
-    public async Task<SortedTemporaryFile> SaveChunkAsync(
+    public SortedTemporaryFile SaveChunk(
         Chunk chunk,
         string workingDirectory,
         CancellationToken cancellationToken)
     {
         var filePath = GetChunkFilePath(workingDirectory, chunk.Index);
 
-        await using var session = new TemporaryFileSession(filePath, _recordParser);
+        using var session = new TemporaryFileSession(filePath, _recordParser);
 
         foreach (var record in chunk.Records)
         {
             cancellationToken.ThrowIfCancellationRequested();
-            await session.WriteTemporaryRecordAsync(record, cancellationToken);
+            session.WriteTemporaryRecord(record);
         }
 
-        await session.CompleteAsync(cancellationToken);
+        session.Complete();
 
         var maximumRecordMemoryBytes = chunk.Records.Count == 0
             ? 0
@@ -143,7 +145,7 @@ internal sealed class FileStorageService
         return Path.Combine(workingDirectory, "empty-result.tmp");
     }
 
-    public Task DeleteFilesAsync(
+    public void DeleteFiles(
         IEnumerable<string> filePaths,
         CancellationToken cancellationToken = default)
     {
@@ -153,10 +155,9 @@ internal sealed class FileStorageService
             File.Delete(filePath);
         }
 
-        return Task.CompletedTask;
     }
 
-    public Task DeleteDirectoryAsync(
+    public void DeleteDirectory(
         string directoryPath,
         CancellationToken cancellationToken = default)
     {
@@ -167,17 +168,15 @@ internal sealed class FileStorageService
             Directory.Delete(directoryPath, recursive: true);
         }
 
-        return Task.CompletedTask;
     }
 
-    public Task MoveResultAsync(
+    public void MoveResult(
         string temporaryFilePath,
         string outputPath,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         File.Move(temporaryFilePath, outputPath);
-        return Task.CompletedTask;
     }
 
     private static string GetChunkFilePath(string workingDirectory, long chunkIndex)

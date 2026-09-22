@@ -52,7 +52,7 @@
                  HorizontalAlignment="Left"
                  Text="256" />
 
-        <TextBlock Grid.Row="6" VerticalAlignment="Center" Text="Workers:" />
+        <TextBlock Grid.Row="6" VerticalAlignment="Center" Text="Sorting workers:" />
         <TextBox x:Name="WorkerCountTextBox"
                  Grid.Row="6"
                  Grid.Column="1"
