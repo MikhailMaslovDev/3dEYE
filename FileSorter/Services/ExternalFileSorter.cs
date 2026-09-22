@@ -33,7 +33,7 @@ internal sealed class ExternalFileSorter
         
         var invalidLinesLogFileName = $"invalid-lines-{DateTime.Now:yyyy-MM-dd_HH-mm-ss}.log";
         var invalidLinesLogPath = Path.Combine(outputDirectory, invalidLinesLogFileName);
-        await using var invalidLinesLogger = InvalidLinesLogger.Create(invalidLinesLogPath);
+        using var invalidLinesLogger = InvalidLinesLogger.Create(invalidLinesLogPath);
 
         try
         {
@@ -44,14 +44,14 @@ internal sealed class ExternalFileSorter
                 progress,
                 cancellationToken);
 
-            var finalTemporaryFile = await MergeAndSaveAsync(
+            var finalTemporaryFile = MergeAndSave(
                 sortedFiles,
                 validatedSettings,
                 workingDirectory,
                 progress,
                 cancellationToken);
 
-            await _fileStorage.MoveResultAsync(
+            _fileStorage.MoveResult(
                 finalTemporaryFile.Path,
                 validatedSettings.OutputPath,
                 cancellationToken);
@@ -74,7 +74,7 @@ internal sealed class ExternalFileSorter
             }
             finally
             {
-                await _fileStorage.DeleteDirectoryAsync(
+                _fileStorage.DeleteDirectory(
                     workingDirectory,
                     CancellationToken.None);
             }
@@ -94,18 +94,25 @@ internal sealed class ExternalFileSorter
 
         try
         {
-            await foreach (var chunk in _fileStorage.ReadChunksAsync(
-                               settings,
-                               invalidLinesLogger,
-                               progress,
-                               operationCancellation.Token))
+            foreach (var chunk in _fileStorage.ReadChunks(
+                         settings,
+                         invalidLinesLogger,
+                         progress,
+                         operationCancellation.Token))
             {
                 activeSorts.Add(Task.Run(
-                    () => SortAndSaveAsync(chunk, workingDirectory, operationCancellation.Token),
+                    () => SortAndSave(chunk, workingDirectory, operationCancellation.Token),
                     operationCancellation.Token));
 
                 if (activeSorts.Count == settings.WorkerCount)
                 {
+                    progress?.Report(new SortingStatus(
+                        SortingPhase.SortingChunk,
+                        ProcessedLines: 0,
+                        ProcessedBytes: 0,
+                        TemporaryFileCount: activeSorts.Count,
+                        BytesPerSecond: 0));
+
                     await CollectCompletedSortAsync(activeSorts, sortedFiles);
                 }
             }
@@ -134,17 +141,17 @@ internal sealed class ExternalFileSorter
         }
     }
 
-    public Task<SortedTemporaryFile> SortAndSaveAsync(
+    public SortedTemporaryFile SortAndSave(
         Chunk chunk,
         string workingDirectory,
         CancellationToken cancellationToken = default)
     {
         chunk.Records.Sort(
             TextRecordComparers.CreateCancellableStableOrdinal(cancellationToken));
-        return _fileStorage.SaveChunkAsync(chunk, workingDirectory, cancellationToken);
+        return _fileStorage.SaveChunk(chunk, workingDirectory, cancellationToken);
     }
 
-    public async Task<SortedTemporaryFile> SortAndSaveAsync(
+    public SortedTemporaryFile SortAndSave(
         IReadOnlyList<SortedTemporaryFile> inputFiles,
         string outputFilePath,
         CancellationToken cancellationToken = default)
@@ -156,17 +163,16 @@ internal sealed class ExternalFileSorter
                 : throw new ArgumentException("At least one sorted file is required.", nameof(inputFiles));
         }
 
-        await using (var session = _fileStorage.OpenTemporaryFileSession(outputFilePath))
+        using (var session = _fileStorage.OpenTemporaryFileSession(outputFilePath))
         {
             var queue = new PriorityQueue<SortedTemporaryFile, TextRecord>(
                 TextRecordComparers.StableOrdinal);
 
             foreach (var inputFile in inputFiles)
             {
-                var record = await session.ReadNextAsync(
+                var record = session.ReadNext(
                     inputFile,
-                    inputFile.Index,
-                    cancellationToken);
+                    inputFile.Index);
 
                 if (record is not null)
                 {
@@ -177,12 +183,11 @@ internal sealed class ExternalFileSorter
             while (queue.TryDequeue(out var inputFile, out var record))
             {
                 cancellationToken.ThrowIfCancellationRequested();
-                await session.WriteTemporaryRecordAsync(record, cancellationToken);
+                session.WriteTemporaryRecord(record);
 
-                var nextRecord = await session.ReadNextAsync(
+                var nextRecord = session.ReadNext(
                     inputFile,
-                    inputFile.Index,
-                    cancellationToken);
+                    inputFile.Index);
 
                 if (nextRecord is not null)
                 {
@@ -190,10 +195,10 @@ internal sealed class ExternalFileSorter
                 }
             }
 
-            await session.CompleteAsync(cancellationToken);
+            session.Complete();
         }
 
-        await _fileStorage.DeleteFilesAsync(
+        _fileStorage.DeleteFiles(
             inputFiles.Select(file => file.Path),
             CancellationToken.None);
 
@@ -203,7 +208,7 @@ internal sealed class ExternalFileSorter
             inputFiles.Max(file => file.MaximumRecordMemoryBytes));
     }
 
-    private async Task<SortedTemporaryFile> MergeAndSaveAsync(
+    private SortedTemporaryFile MergeAndSave(
         List<SortedTemporaryFile> sortedFiles,
         ValidatedSortSettings settings,
         string workingDirectory,
@@ -214,8 +219,8 @@ internal sealed class ExternalFileSorter
         {
             var emptyResultFilePath = _fileStorage.GetEmptyResultFilePath(workingDirectory);
 
-            await using var session = _fileStorage.OpenTemporaryFileSession(emptyResultFilePath);
-            await session.CompleteAsync(cancellationToken);
+            using var session = _fileStorage.OpenTemporaryFileSession(emptyResultFilePath);
+            session.Complete();
 
             return new SortedTemporaryFile(0, emptyResultFilePath, 0);
         }
@@ -254,7 +259,7 @@ internal sealed class ExternalFileSorter
                     passIndex,
                     inputFiles[0].Index);
 
-                mergedFiles.Add(await SortAndSaveAsync(
+                mergedFiles.Add(SortAndSave(
                     inputFiles,
                     outputFilePath,
                     cancellationToken));

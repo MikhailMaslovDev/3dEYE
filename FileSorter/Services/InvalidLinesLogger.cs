@@ -3,7 +3,7 @@ using System.Text;
 
 namespace FileSorter;
 
-internal sealed class InvalidLinesLogger : IAsyncDisposable
+internal sealed class InvalidLinesLogger : IDisposable
 {
     private const int BufferSize = 64 * 1024;
     private static readonly UTF8Encoding Utf8WithoutBom = new(false);
@@ -23,22 +23,21 @@ internal sealed class InvalidLinesLogger : IAsyncDisposable
         return new InvalidLinesLogger(Path.GetFullPath(logPath));
     }
 
-    public async Task WriteAsync(
+    public void Write(
         long lineNumber,
         string reason,
-        string originalLine,
-        CancellationToken cancellationToken)
+        string originalLine)
     {
         var entry = $"Line {lineNumber}: {reason} | {originalLine}";
         var writer = _writer ??= CreateWriter();
 
         HasEntries = true;
-        await writer.WriteLineAsync(entry.AsMemory(), cancellationToken);
+        writer.WriteLine(entry);
     }
 
-    public ValueTask DisposeAsync()
+    public void Dispose()
     {
-        return _writer?.DisposeAsync() ?? ValueTask.CompletedTask;
+        _writer?.Dispose();
     }
 
     private StreamWriter CreateWriter()
@@ -54,7 +53,7 @@ internal sealed class InvalidLinesLogger : IAsyncDisposable
             FileAccess.Write,
             FileShare.None,
             BufferSize,
-            FileOptions.Asynchronous);
+            FileOptions.None);
 
         return new StreamWriter(stream, Utf8WithoutBom, BufferSize);
     }

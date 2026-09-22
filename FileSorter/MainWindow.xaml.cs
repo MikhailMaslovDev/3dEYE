@@ -108,6 +108,8 @@ public partial class MainWindow : Window
         StatusTextBlock.Text = status.Phase switch
         {
             SortingPhase.ReadingInput => $"Reading input: {status.ProcessedLines:N0} lines.",
+            SortingPhase.SortingChunk =>
+                $"Sorting active chunks: {status.TemporaryFileCount:N0}.",
             SortingPhase.MergingFiles =>
                 $"Merging {status.TemporaryFileCount:N0} temporary files.",
             SortingPhase.Completed => "Sorting completed.",
